@@ -1,0 +1,1624 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM Pro — Gestión de Clientes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                fontFamily: {
+                    display: ['Space Grotesk', 'sans-serif'],
+                    body: ['DM Sans', 'sans-serif'],
+                }
+            }
+        }
+    }
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DM Sans', sans-serif; background: #f1f5f9; color: #0f172a; overflow-x: hidden; }
+
+        /* Sidebar */
+        .sidebar {
+            background: linear-gradient(180deg, #0f172a 0%, #162032 100%);
+            width: 260px; min-height: 100vh; position: fixed; left: 0; top: 0; z-index: 40;
+            transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+            display: flex; flex-direction: column;
+        }
+        .sidebar-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+            z-index: 35; backdrop-filter: blur(4px);
+        }
+        .nav-item {
+            display: flex; align-items: center; gap: 12px; padding: 11px 16px;
+            margin: 2px 12px; border-radius: 10px; color: #94a3b8; cursor: pointer;
+            transition: all 0.2s ease; font-size: 14px; font-weight: 500;
+            text-decoration: none; user-select: none;
+        }
+        .nav-item:hover { background: rgba(255,255,255,0.06); color: #e2e8f0; }
+        .nav-item.active { background: rgba(16,185,129,0.12); color: #34d399; }
+        .nav-item.active i { color: #34d399; }
+        .nav-item i { width: 20px; text-align: center; font-size: 15px; }
+
+        /* Contenido principal */
+        .main-content { margin-left: 260px; min-height: 100vh; }
+        .top-bar {
+            background: rgba(255,255,255,0.8); backdrop-filter: blur(12px);
+            border-bottom: 1px solid #e2e8f0; padding: 16px 32px;
+            position: sticky; top: 0; z-index: 20;
+        }
+
+        /* Tarjetas de estadísticas */
+        .stat-card {
+            background: #fff; border-radius: 16px; padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            border: 1px solid #f1f5f9; transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.08); }
+
+        /* Tabla */
+        .data-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        .data-table thead th {
+            padding: 12px 16px; text-align: left; font-size: 12px;
+            font-weight: 600; color: #64748b; text-transform: uppercase;
+            letter-spacing: 0.05em; border-bottom: 2px solid #e2e8f0;
+            background: #f8fafc; position: sticky; top: 0;
+        }
+        .data-table tbody tr {
+            transition: background 0.15s;
+        }
+        .data-table tbody tr:hover { background: #f8fafc; }
+        .data-table tbody td {
+            padding: 14px 16px; border-bottom: 1px solid #f1f5f9;
+            font-size: 14px; vertical-align: middle;
+        }
+
+        /* Kanban */
+        .kanban-col {
+            background: #f8fafc; border-radius: 16px; padding: 16px;
+            min-height: 400px; flex: 1; min-width: 240px;
+            border: 2px dashed transparent; transition: border-color 0.2s, background 0.2s;
+        }
+        .kanban-col.drag-over { border-color: #10b981; background: #f0fdf4; }
+        .kanban-card {
+            background: #fff; border-radius: 12px; padding: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06); cursor: grab;
+            border: 1px solid #e2e8f0; transition: transform 0.15s, box-shadow 0.15s;
+            margin-bottom: 10px;
+        }
+        .kanban-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .kanban-card.dragging { opacity: 0.4; transform: rotate(2deg); }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(15,23,42,0.5);
+            backdrop-filter: blur(6px); z-index: 50; display: none;
+            align-items: center; justify-content: center; padding: 16px;
+            animation: fadeIn 0.2s ease;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal-box {
+            background: #fff; border-radius: 20px; box-shadow: 0 25px 60px rgba(0,0,0,0.2);
+            max-width: 540px; width: 100%; max-height: 90vh; overflow-y: auto;
+            animation: slideUp 0.3s cubic-bezier(0.16,1,0.3,1);
+        }
+
+        /* Toast */
+        .toast {
+            padding: 14px 20px; border-radius: 12px; color: #fff;
+            font-size: 14px; font-weight: 500; box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            display: flex; align-items: center; gap: 10px; min-width: 280px;
+            animation: slideInRight 0.35s cubic-bezier(0.16,1,0.3,1);
+        }
+        .toast.success { background: #059669; }
+        .toast.error { background: #dc2626; }
+        .toast.info { background: #0891b2; }
+        .toast.warning { background: #d97706; }
+
+        /* Badges */
+        .badge {
+            display: inline-flex; align-items: center; padding: 3px 10px;
+            border-radius: 20px; font-size: 12px; font-weight: 600;
+        }
+
+        /* Formularios */
+        .form-input {
+            width: 100%; padding: 10px 14px; border: 1.5px solid #e2e8f0;
+            border-radius: 10px; font-size: 14px; font-family: inherit;
+            transition: border-color 0.2s, box-shadow 0.2s; background: #fff;
+            outline: none;
+        }
+        .form-input:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.12); }
+        .form-label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+        .form-select {
+            width: 100%; padding: 10px 14px; border: 1.5px solid #e2e8f0;
+            border-radius: 10px; font-size: 14px; font-family: inherit;
+            background: #fff; outline: none; cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .form-select:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.12); }
+
+        /* Botones */
+        .btn {
+            display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px;
+            border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer;
+            border: none; transition: all 0.2s; font-family: inherit;
+        }
+        .btn-primary { background: #10b981; color: #fff; }
+        .btn-primary:hover { background: #059669; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16,185,129,0.3); }
+        .btn-secondary { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+        .btn-secondary:hover { background: #e2e8f0; }
+        .btn-danger { background: #ef4444; color: #fff; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-sm { padding: 6px 12px; font-size: 13px; border-radius: 8px; }
+        .btn-icon {
+            width: 34px; height: 34px; padding: 0; display: inline-flex;
+            align-items: center; justify-content: center; border-radius: 8px;
+            border: none; cursor: pointer; background: transparent; color: #64748b;
+            transition: all 0.15s;
+        }
+        .btn-icon:hover { background: #f1f5f9; color: #0f172a; }
+        .btn-icon.danger:hover { background: #fee2e2; color: #dc2626; }
+
+        /* Barra de progreso del dashboard */
+        .progress-bar { height: 8px; border-radius: 4px; background: #e2e8f0; overflow: hidden; }
+        .progress-fill { height: 100%; border-radius: 4px; transition: width 0.6s cubic-bezier(0.16,1,0.3,1); }
+
+        /* Nota tarjeta */
+        .note-card {
+            background: #fff; border-radius: 16px; padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #f1f5f9;
+            transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;
+        }
+        .note-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.08); }
+
+        /* Animaciones */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes slideInRight { from { opacity: 0; transform: translateX(60px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; transform: translateX(40px); } }
+        @keyframes countUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-in { animation: slideUp 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+        .animate-in-delay-1 { animation-delay: 0.05s; }
+        .animate-in-delay-2 { animation-delay: 0.1s; }
+        .animate-in-delay-3 { animation-delay: 0.15s; }
+
+        /* Checkbox personalizado */
+        .custom-check {
+            width: 20px; height: 20px; border-radius: 6px; border: 2px solid #cbd5e1;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: all 0.15s; flex-shrink: 0;
+        }
+        .custom-check.checked { background: #10b981; border-color: #10b981; }
+        .custom-check.checked i { display: block; color: #fff; font-size: 11px; }
+        .custom-check i { display: none; }
+
+        /* Scrollbar personalizado */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .sidebar-overlay.show { display: block; }
+            .main-content { margin-left: 0; }
+            .top-bar { padding: 12px 16px; }
+            .content-area { padding: 16px !important; }
+            .kanban-wrap { flex-direction: column; }
+            .kanban-col { min-height: 200px; }
+        }
+
+        /* Modo local banner */
+        .local-banner {
+            background: linear-gradient(90deg, #fef3c7, #fde68a);
+            border-bottom: 1px solid #f59e0b; padding: 10px 32px;
+            font-size: 13px; color: #92400e; display: none; align-items: center; gap: 8px;
+        }
+        .local-banner.show { display: flex; }
+
+        /* Iniciales avatar */
+        .avatar {
+            width: 38px; height: 38px; border-radius: 10px; display: flex;
+            align-items: center; justify-content: center; font-weight: 700;
+            font-size: 14px; color: #fff; flex-shrink: 0;
+        }
+
+        /* Empty state */
+        .empty-state { text-align: center; padding: 60px 20px; }
+        .empty-state .icon-wrap {
+            width: 72px; height: 72px; border-radius: 20px; background: #f1f5f9;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 16px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Banner modo local -->
+    <div id="localBanner" class="local-banner">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>Modo local: los datos se guardan solo en este navegador. Despliega en Netlify para sincronizar entre dispositivos.</span>
+    </div>
+
+    <!-- Overlay sidebar móvil -->
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar">
+        <div style="padding: 24px 20px 20px;">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#10b981,#059669);display:flex;align-items:center;justify-content:center;">
+                    <i class="fas fa-bolt" style="color:#fff;font-size:18px;"></i>
+                </div>
+                <div>
+                    <div style="font-family:'Space Grotesk';font-weight:700;font-size:20px;color:#f1f5f9;letter-spacing:-0.02em;">CRM Pro</div>
+                    <div style="font-size:11px;color:#64748b;margin-top:-2px;">Gestión Inteligente</div>
+                </div>
+            </div>
+        </div>
+        <div style="padding: 0 0 12px; flex:1;">
+            <div style="padding:0 20px 8px;font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.08em;">Principal</div>
+            <a class="nav-item active" data-view="dashboard" onclick="navigate('dashboard')">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </a>
+            <a class="nav-item" data-view="contacts" onclick="navigate('contacts')">
+                <i class="fas fa-users"></i> Contactos
+            </a>
+            <a class="nav-item" data-view="deals" onclick="navigate('deals')">
+                <i class="fas fa-handshake"></i> Negocios
+            </a>
+            <a class="nav-item" data-view="tasks" onclick="navigate('tasks')">
+                <i class="fas fa-check-circle"></i> Tareas
+            </a>
+            <a class="nav-item" data-view="notes" onclick="navigate('notes')">
+                <i class="fas fa-sticky-note"></i> Notas
+            </a>
+            <div style="padding:16px 20px 8px;font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.08em;">Sistema</div>
+            <a class="nav-item" data-view="settings" onclick="navigate('settings')">
+                <i class="fas fa-cog"></i> Configuración
+            </a>
+        </div>
+        <div style="padding:16px 20px;border-top:1px solid rgba(255,255,255,0.06);">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:34px;height:34px;border-radius:10px;background:#1e293b;display:flex;align-items:center;justify-content:center;">
+                    <i class="fas fa-user" style="color:#64748b;font-size:13px;"></i>
+                </div>
+                <div>
+                    <div style="font-size:13px;font-weight:600;color:#e2e8f0;">Mi Usuario</div>
+                    <div style="font-size:11px;color:#64748b;">Administrador</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Contenido principal -->
+    <div class="main-content">
+        <header class="top-bar">
+            <div style="display:flex;align-items:center;gap:16px;">
+                <button id="menuBtn" class="btn-icon" onclick="toggleSidebar()" style="display:none;">
+                    <i class="fas fa-bars" style="font-size:18px;"></i>
+                </button>
+                <div style="position:relative;flex:1;max-width:400px;">
+                    <i class="fas fa-search" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:14px;"></i>
+                    <input id="globalSearch" type="text" placeholder="Buscar contactos, negocios, tareas..."
+                        class="form-input" style="padding-left:40px;background:#f8fafc;border-color:transparent;"
+                        oninput="handleSearch(this.value)">
+                </div>
+                <div style="flex:1;"></div>
+                <div id="syncIndicator" style="display:flex;align-items:center;gap:6px;font-size:12px;color:#94a3b8;">
+                    <div id="syncDot" style="width:8px;height:8px;border-radius:50%;background:#10b981;"></div>
+                    <span id="syncText">Sincronizado</span>
+                </div>
+            </div>
+        </header>
+        <main id="contentArea" class="content-area" style="padding:28px 32px;"></main>
+    </div>
+
+    <!-- Modal -->
+    <div id="modalOverlay" class="modal-overlay" onclick="event.target===this&&closeModal()">
+        <div id="modalBox" class="modal-box"></div>
+    </div>
+
+    <!-- Toast container -->
+    <div id="toastContainer" style="position:fixed;top:20px;right:20px;z-index:100;display:flex;flex-direction:column;gap:8px;"></div>
+
+    <script>
+    // ============================================================
+    //  ESTADO GLOBAL
+    // ============================================================
+    const state = {
+        currentView: 'dashboard',
+        contacts: [],
+        deals: [],
+        tasks: [],
+        notes: [],
+        searchQuery: '',
+        isLocal: false,
+        loading: false,
+        pendingDeleteAction: null
+    };
+
+    // Colores para avatares
+    const AVATAR_COLORS = ['#10b981','#0891b2','#7c3aed','#db2777','#ea580c','#ca8a04','#16a34a','#2563eb','#9333ea','#e11d48'];
+
+    // Etapas de negocios
+    const DEAL_STAGES = [
+        { id: 'nuevo', label: 'Nuevo', color: '#06b6d4', bg: '#cffafe' },
+        { id: 'en_proceso', label: 'En Proceso', color: '#f59e0b', bg: '#fef3c7' },
+        { id: 'ganado', label: 'Ganado', color: '#10b981', bg: '#d1fae5' },
+        { id: 'perdido', label: 'Perdido', color: '#ef4444', bg: '#fee2e2' }
+    ];
+
+    // ============================================================
+    //  CAPA DE DATOS — Netlify Functions + fallback localStorage
+    // ============================================================
+    const API = {
+        async load() {
+            try {
+                const res = await fetch('/.netlify/functions/get-data');
+                if (!res.ok) throw new Error('Error de red');
+                const data = await res.json();
+                state.isLocal = false;
+                document.getElementById('localBanner').classList.remove('show');
+                return data;
+            } catch (e) {
+                // Fallback a localStorage
+                state.isLocal = true;
+                document.getElementById('localBanner').classList.add('show');
+                const raw = localStorage.getItem('crm_data');
+                return raw ? JSON.parse(raw) : this.emptyData();
+            }
+        },
+        async save(data) {
+            if (state.isLocal) {
+                localStorage.setItem('crm_data', JSON.stringify(data));
+                return { success: true };
+            }
+            try {
+                setSyncing();
+                const res = await fetch('/.netlify/functions/save-data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (!res.ok) throw new Error('Error al guardar');
+                setSynced();
+                return await res.json();
+            } catch (e) {
+                // Si falla la red, guardar localmente como respaldo
+                localStorage.setItem('crm_data', JSON.stringify(data));
+                setSyncError();
+                toast('Error de sincronización. Datos guardados localmente.', 'warning');
+                return { success: true };
+            }
+        },
+        emptyData() {
+            return { contacts: [], deals: [], tasks: [], notes: [] };
+        }
+    };
+
+    function setSyncing() {
+        const dot = document.getElementById('syncDot');
+        const txt = document.getElementById('syncText');
+        dot.style.background = '#f59e0b';
+        txt.textContent = 'Guardando...';
+    }
+    function setSynced() {
+        const dot = document.getElementById('syncDot');
+        const txt = document.getElementById('syncText');
+        dot.style.background = '#10b981';
+        txt.textContent = 'Sincronizado';
+    }
+    function setSyncError() {
+        const dot = document.getElementById('syncDot');
+        const txt = document.getElementById('syncText');
+        dot.style.background = '#ef4444';
+        txt.textContent = 'Sin conexión';
+    }
+
+    // Guardar estado actual
+    async function persistState() {
+        const data = {
+            contacts: state.contacts,
+            deals: state.deals,
+            tasks: state.tasks,
+            notes: state.notes
+        };
+        await API.save(data);
+    }
+
+    // ============================================================
+    //  UTILIDADES
+    // ============================================================
+    function uuid() {
+        return 'xxxx-xxxx-xxxx'.replace(/x/g, () => ((Math.random()*16)|0).toString(16));
+    }
+
+    function getInitials(name) {
+        return name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+    }
+
+    function getAvatarColor(name) {
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+        return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+    }
+
+    function formatCurrency(n) {
+        return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0 }).format(n || 0);
+    }
+
+    function formatDate(d) {
+        if (!d) return '—';
+        return new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    function relativeTime(d) {
+        const diff = Date.now() - new Date(d).getTime();
+        const mins = Math.floor(diff / 60000);
+        if (mins < 1) return 'Ahora';
+        if (mins < 60) return `Hace ${mins}min`;
+        const hrs = Math.floor(mins / 60);
+        if (hrs < 24) return `Hace ${hrs}h`;
+        const days = Math.floor(hrs / 24);
+        if (days < 7) return `Hace ${days}d`;
+        return formatDate(d);
+    }
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str || '';
+        return div.innerHTML;
+    }
+
+    function getContactName(id) {
+        const c = state.contacts.find(c => c.id === id);
+        return c ? c.name : '—';
+    }
+
+    // ============================================================
+    //  TOAST
+    // ============================================================
+    function toast(message, type = 'success') {
+        const container = document.getElementById('toastContainer');
+        const icons = { success: 'fa-check-circle', error: 'fa-times-circle', info: 'fa-info-circle', warning: 'fa-exclamation-circle' };
+        const el = document.createElement('div');
+        el.className = `toast ${type}`;
+        el.innerHTML = `<i class="fas ${icons[type]}"></i><span>${escapeHtml(message)}</span>`;
+        container.appendChild(el);
+        setTimeout(() => {
+            el.style.animation = 'fadeOut 0.3s ease forwards';
+            setTimeout(() => el.remove(), 300);
+        }, 3000);
+    }
+
+    // ============================================================
+    //  MODAL
+    // ============================================================
+    function showModal(html) {
+        document.getElementById('modalBox').innerHTML = html;
+        document.getElementById('modalOverlay').classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+        document.getElementById('modalOverlay').classList.remove('show');
+        document.body.style.overflow = '';
+        state.pendingDeleteAction = null;
+    }
+
+    function showConfirm(message, action) {
+        state.pendingDeleteAction = action;
+        showModal(`
+            <div style="padding:32px;text-align:center;">
+                <div style="width:64px;height:64px;border-radius:50%;background:#fee2e2;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+                    <i class="fas fa-exclamation-triangle" style="font-size:24px;color:#dc2626;"></i>
+                </div>
+                <h3 style="font-family:'Space Grotesk';font-size:18px;font-weight:700;color:#0f172a;">${escapeHtml(message)}</h3>
+                <p style="font-size:14px;color:#64748b;margin-top:8px;">Esta acción no se puede deshacer.</p>
+                <div style="display:flex;gap:12px;margin-top:24px;">
+                    <button class="btn btn-secondary" style="flex:1;" onclick="closeModal()">Cancelar</button>
+                    <button class="btn btn-danger" style="flex:1;" onclick="executePendingDelete()">Eliminar</button>
+                </div>
+            </div>
+        `);
+    }
+
+    function executePendingDelete() {
+        if (state.pendingDeleteAction) {
+            state.pendingDeleteAction();
+            state.pendingDeleteAction = null;
+        }
+        closeModal();
+    }
+
+    // ============================================================
+    //  SIDEBAR / NAVEGACIÓN
+    // ============================================================
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('open');
+        document.getElementById('sidebarOverlay').classList.toggle('show');
+    }
+
+    function navigate(view) {
+        state.currentView = view;
+        state.searchQuery = '';
+        document.getElementById('globalSearch').value = '';
+        // Actualizar nav activo
+        document.querySelectorAll('.nav-item').forEach(el => {
+            el.classList.toggle('active', el.dataset.view === view);
+        });
+        // Cerrar sidebar en móvil
+        document.getElementById('sidebar').classList.remove('open');
+        document.getElementById('sidebarOverlay').classList.remove('show');
+        renderView();
+    }
+
+    function handleSearch(query) {
+        state.searchQuery = query.toLowerCase().trim();
+        renderView();
+    }
+
+    // ============================================================
+    //  RENDERIZADO PRINCIPAL
+    // ============================================================
+    function renderView() {
+        const area = document.getElementById('contentArea');
+        const views = { dashboard: renderDashboard, contacts: renderContacts, deals: renderDeals, tasks: renderTasks, notes: renderNotes, settings: renderSettings };
+        const renderer = views[state.currentView] || renderDashboard;
+        area.innerHTML = renderer();
+        area.scrollTop = 0;
+        // Inicializar drag-and-drop si es kanban
+        if (state.currentView === 'deals') initKanbanDrag();
+    }
+
+    // ============================================================
+    //  DASHBOARD
+    // ============================================================
+    function renderDashboard() {
+        const totalContacts = state.contacts.length;
+        const activeDeals = state.deals.filter(d => d.stage !== 'perdido' && d.stage !== 'ganado').length;
+        const pendingTasks = state.tasks.filter(t => t.status !== 'completada').length;
+        const potentialRevenue = state.deals.filter(d => d.stage !== 'perdido').reduce((s, d) => s + (parseFloat(d.value) || 0), 0);
+        const wonRevenue = state.deals.filter(d => d.stage === 'ganado').reduce((s, d) => s + (parseFloat(d.value) || 0), 0);
+
+        // Datos para la gráfica de etapas
+        const stageData = DEAL_STAGES.map(s => ({
+            ...s,
+            count: state.deals.filter(d => d.stage === s.id).length,
+            value: state.deals.filter(d => d.stage === s.id).reduce((sum, d) => sum + (parseFloat(d.value) || 0), 0)
+        }));
+        const maxStageValue = Math.max(...stageData.map(s => s.value), 1);
+
+        // Actividad reciente (últimos 10 items)
+        const recentItems = [
+            ...state.contacts.map(c => ({ ...c, _type: 'contact', _date: c.createdAt })),
+            ...state.deals.map(d => ({ ...d, _type: 'deal', _date: d.createdAt })),
+            ...state.tasks.map(t => ({ ...t, _type: 'task', _date: t.createdAt })),
+            ...state.notes.map(n => ({ ...n, _type: 'note', _date: n.createdAt }))
+        ].sort((a, b) => new Date(b._date) - new Date(a._date)).slice(0, 8);
+
+        const typeIcons = { contact: 'fa-user-plus', deal: 'fa-handshake', task: 'fa-check', note: 'fa-sticky-note' };
+        const typeLabels = { contact: 'Contacto', deal: 'Negocio', task: 'Tarea', note: 'Nota' };
+        const typeColors = { contact: '#10b981', deal: '#0891b2', task: '#f59e0b', note: '#8b5cf6' };
+
+        return `
+        <div style="margin-bottom:28px;">
+            <h1 style="font-family:'Space Grotesk';font-size:28px;font-weight:700;letter-spacing:-0.02em;">Dashboard</h1>
+            <p style="color:#64748b;font-size:15px;margin-top:4px;">Resumen general de tu gestión</p>
+        </div>
+
+        <!-- Tarjetas de estadísticas -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:28px;">
+            <div class="stat-card animate-in">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div>
+                        <p style="font-size:13px;color:#64748b;font-weight:500;">Total Contactos</p>
+                        <p style="font-size:32px;font-weight:800;margin-top:4px;font-family:'Space Grotesk';">${totalContacts}</p>
+                    </div>
+                    <div style="width:48px;height:48px;border-radius:14px;background:#d1fae5;display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-users" style="color:#059669;font-size:20px;"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card animate-in animate-in-delay-1">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div>
+                        <p style="font-size:13px;color:#64748b;font-weight:500;">Negocios Activos</p>
+                        <p style="font-size:32px;font-weight:800;margin-top:4px;font-family:'Space Grotesk';">${activeDeals}</p>
+                    </div>
+                    <div style="width:48px;height:48px;border-radius:14px;background:#cffafe;display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-handshake" style="color:#0891b2;font-size:20px;"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card animate-in animate-in-delay-2">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div>
+                        <p style="font-size:13px;color:#64748b;font-weight:500;">Tareas Pendientes</p>
+                        <p style="font-size:32px;font-weight:800;margin-top:4px;font-family:'Space Grotesk';">${pendingTasks}</p>
+                    </div>
+                    <div style="width:48px;height:48px;border-radius:14px;background:#fef3c7;display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-check-circle" style="color:#d97706;font-size:20px;"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card animate-in animate-in-delay-3">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div>
+                        <p style="font-size:13px;color:#64748b;font-weight:500;">Ingresos Potenciales</p>
+                        <p style="font-size:28px;font-weight:800;margin-top:4px;font-family:'Space Grotesk';">${formatCurrency(potentialRevenue)}</p>
+                    </div>
+                    <div style="width:48px;height:48px;border-radius:14px;background:#fce7f3;display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-dollar-sign" style="color:#db2777;font-size:20px;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+            <!-- Pipeline de negocios -->
+            <div class="stat-card animate-in" style="grid-column: span 1;">
+                <h3 style="font-family:'Space Grotesk';font-size:16px;font-weight:700;margin-bottom:20px;">Pipeline de Negocios</h3>
+                ${stageData.map(s => `
+                    <div style="margin-bottom:16px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                            <span style="font-size:13px;font-weight:600;color:#374151;">${s.label}</span>
+                            <span style="font-size:13px;color:#64748b;">${s.count} · ${formatCurrency(s.value)}</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width:${maxStageValue > 0 ? (s.value / maxStageValue * 100) : 0}%;background:${s.color};"></div>
+                        </div>
+                    </div>
+                `).join('')}
+                <div style="margin-top:16px;padding-top:16px;border-top:1px solid #f1f5f9;display:flex;justify-content:space-between;">
+                    <span style="font-size:13px;color:#64748b;">Ingresos ganados</span>
+                    <span style="font-size:14px;font-weight:700;color:#059669;">${formatCurrency(wonRevenue)}</span>
+                </div>
+            </div>
+
+            <!-- Actividad reciente -->
+            <div class="stat-card animate-in animate-in-delay-1" style="grid-column: span 1;">
+                <h3 style="font-family:'Space Grotesk';font-size:16px;font-weight:700;margin-bottom:20px;">Actividad Reciente</h3>
+                ${recentItems.length === 0 ? `
+                    <div class="empty-state" style="padding:40px 0;">
+                        <div class="icon-wrap"><i class="fas fa-clock" style="font-size:24px;color:#cbd5e1;"></i></div>
+                        <p style="color:#94a3b8;font-size:14px;">Sin actividad reciente</p>
+                    </div>
+                ` : recentItems.map(item => `
+                    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f8fafc;">
+                        <div style="width:36px;height:36px;border-radius:10px;background:${typeColors[item._type]}15;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i class="fas ${typeIcons[item._type]}" style="font-size:13px;color:${typeColors[item._type]};"></i>
+                        </div>
+                        <div style="flex:1;min-width:0;">
+                            <p style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.name || item.title)}</p>
+                            <p style="font-size:11px;color:#94a3b8;">${typeLabels[item._type]}</p>
+                        </div>
+                        <span style="font-size:11px;color:#94a3b8;white-space:nowrap;">${relativeTime(item._date)}</span>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+        <style>@media(max-width:900px){.stat-card[style*="grid-column"]{grid-column:span 1!important;}}</style>
+        `;
+    }
+
+    // ============================================================
+    //  CONTACTOS
+    // ============================================================
+    function renderContacts() {
+        let filtered = state.contacts;
+        if (state.searchQuery) {
+            filtered = filtered.filter(c =>
+                c.name.toLowerCase().includes(state.searchQuery) ||
+                (c.email || '').toLowerCase().includes(state.searchQuery) ||
+                (c.company || '').toLowerCase().includes(state.searchQuery) ||
+                (c.phone || '').includes(state.searchQuery)
+            );
+        }
+
+        return `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+            <div>
+                <h1 style="font-family:'Space Grotesk';font-size:28px;font-weight:700;letter-spacing:-0.02em;">Contactos</h1>
+                <p style="color:#64748b;font-size:15px;margin-top:4px;">${state.contacts.length} contacto${state.contacts.length!==1?'s':''} registrado${state.contacts.length!==1?'s':''}</p>
+            </div>
+            <button class="btn btn-primary" onclick="showContactForm()">
+                <i class="fas fa-plus"></i> Nuevo Contacto
+            </button>
+        </div>
+        <div class="stat-card animate-in" style="padding:0;overflow:hidden;">
+            ${filtered.length === 0 ? `
+                <div class="empty-state">
+                    <div class="icon-wrap"><i class="fas fa-users" style="font-size:28px;color:#cbd5e1;"></i></div>
+                    <h3 style="font-size:16px;font-weight:600;color:#64748b;">${state.searchQuery ? 'Sin resultados' : 'Sin contactos'}</h3>
+                    <p style="font-size:14px;color:#94a3b8;margin-top:4px;">${state.searchQuery ? 'Intenta con otro término de búsqueda' : 'Agrega tu primer contacto para comenzar'}</p>
+                    ${!state.searchQuery ? '<button class="btn btn-primary" style="margin-top:16px;" onclick="showContactForm()"><i class="fas fa-plus"></i> Agregar Contacto</button>' : ''}
+                </div>
+            ` : `
+                <div style="overflow-x:auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Contacto</th>
+                                <th>Email</th>
+                                <th>Teléfono</th>
+                                <th>Empresa</th>
+                                <th>Estado</th>
+                                <th style="width:100px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${filtered.map(c => {
+                                const color = getAvatarColor(c.name);
+                                const isActive = c.status === 'activo';
+                                return `
+                                <tr>
+                                    <td>
+                                        <div style="display:flex;align-items:center;gap:12px;">
+                                            <div class="avatar" style="background:${color};">${getInitials(c.name)}</div>
+                                            <div>
+                                                <div style="font-weight:600;font-size:14px;">${escapeHtml(c.name)}</div>
+                                                <div style="font-size:12px;color:#94a3b8;">Creado ${formatDate(c.createdAt)}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td style="color:#64748b;">${escapeHtml(c.email) || '—'}</td>
+                                    <td style="color:#64748b;">${escapeHtml(c.phone) || '—'}</td>
+                                    <td style="color:#64748b;">${escapeHtml(c.company) || '—'}</td>
+                                    <td>
+                                        <span class="badge" style="background:${isActive ? '#d1fae5' : '#f1f5f9'};color:${isActive ? '#059669' : '#64748b'};">
+                                            ${isActive ? 'Activo' : 'Inactivo'}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div style="display:flex;gap:4px;">
+                                            <button class="btn-icon" title="Editar" onclick="showContactForm('${c.id}')"><i class="fas fa-pen" style="font-size:13px;"></i></button>
+                                            <button class="btn-icon danger" title="Eliminar" onclick="deleteContact('${c.id}')"><i class="fas fa-trash" style="font-size:13px;"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>`;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `}
+        </div>`;
+    }
+
+    function showContactForm(id) {
+        const c = id ? state.contacts.find(x => x.id === id) : null;
+        const isEdit = !!c;
+        showModal(`
+            <div style="padding:28px;">
+                <h2 style="font-family:'Space Grotesk';font-size:20px;font-weight:700;margin-bottom:24px;">
+                    ${isEdit ? 'Editar Contacto' : 'Nuevo Contacto'}
+                </h2>
+                <form id="contactForm" onsubmit="saveContact(event, '${id || ''}')">
+                    <div style="display:grid;gap:16px;">
+                        <div>
+                            <label class="form-label">Nombre completo *</label>
+                            <input class="form-input" name="name" required value="${escapeHtml(c?.name || '')}" placeholder="Ej: Juan Pérez">
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <div>
+                                <label class="form-label">Email</label>
+                                <input class="form-input" name="email" type="email" value="${escapeHtml(c?.email || '')}" placeholder="correo@ejemplo.com">
+                            </div>
+                            <div>
+                                <label class="form-label">Teléfono</label>
+                                <input class="form-input" name="phone" value="${escapeHtml(c?.phone || '')}" placeholder="+52 55 1234 5678">
+                            </div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <div>
+                                <label class="form-label">Empresa</label>
+                                <input class="form-input" name="company" value="${escapeHtml(c?.company || '')}" placeholder="Nombre de la empresa">
+                            </div>
+                            <div>
+                                <label class="form-label">Estado</label>
+                                <select class="form-select" name="status">
+                                    <option value="activo" ${c?.status === 'activo' || !c ? 'selected' : ''}>Activo</option>
+                                    <option value="inactivo" ${c?.status === 'inactivo' ? 'selected' : ''}>Inactivo</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="form-label">Notas</label>
+                            <textarea class="form-input" name="notes" rows="3" placeholder="Notas adicionales...">${escapeHtml(c?.notes || '')}</textarea>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:12px;margin-top:24px;justify-content:flex-end;">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">${isEdit ? 'Guardar Cambios' : 'Crear Contacto'}</button>
+                    </div>
+                </form>
+            </div>
+        `);
+    }
+
+    async function saveContact(e, id) {
+        e.preventDefault();
+        const form = e.target;
+        const data = {
+            name: form.name.value.trim(),
+            email: form.email.value.trim(),
+            phone: form.phone.value.trim(),
+            company: form.company.value.trim(),
+            status: form.status.value,
+            notes: form.notes.value.trim()
+        };
+        if (!data.name) return;
+
+        if (id) {
+            const idx = state.contacts.findIndex(c => c.id === id);
+            if (idx !== -1) {
+                state.contacts[idx] = { ...state.contacts[idx], ...data, updatedAt: new Date().toISOString() };
+            }
+            toast('Contacto actualizado');
+        } else {
+            state.contacts.push({ id: uuid(), ...data, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+            toast('Contacto creado');
+        }
+        await persistState();
+        closeModal();
+        renderView();
+    }
+
+    function deleteContact(id) {
+        const c = state.contacts.find(x => x.id === id);
+        showConfirm(`¿Eliminar a ${c?.name}?`, async () => {
+            state.contacts = state.contacts.filter(x => x.id !== id);
+            // Eliminar referencias en otros módulos
+            state.deals.forEach(d => { if (d.contactId === id) d.contactId = ''; });
+            state.tasks.forEach(t => { if (t.contactId === id) t.contactId = ''; });
+            state.notes.forEach(n => { if (n.contactId === id) n.contactId = ''; });
+            await persistState();
+            toast('Contacto eliminado', 'info');
+            renderView();
+        });
+    }
+
+    // ============================================================
+    //  NEGOCIOS (KANBAN)
+    // ============================================================
+    function renderDeals() {
+        let filtered = state.deals;
+        if (state.searchQuery) {
+            filtered = filtered.filter(d =>
+                d.title.toLowerCase().includes(state.searchQuery) ||
+                getContactName(d.contactId).toLowerCase().includes(state.searchQuery)
+            );
+        }
+
+        return `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+            <div>
+                <h1 style="font-family:'Space Grotesk';font-size:28px;font-weight:700;letter-spacing:-0.02em;">Negocios</h1>
+                <p style="color:#64748b;font-size:15px;margin-top:4px;">${state.deals.length} negocio${state.deals.length!==1?'s':''} en el pipeline</p>
+            </div>
+            <button class="btn btn-primary" onclick="showDealForm()">
+                <i class="fas fa-plus"></i> Nuevo Negocio
+            </button>
+        </div>
+        <div class="kanban-wrap animate-in" style="display:flex;gap:16px;overflow-x:auto;padding-bottom:16px;">
+            ${DEAL_STAGES.map(stage => {
+                const stageDeals = filtered.filter(d => d.stage === stage.id);
+                const totalValue = stageDeals.reduce((s, d) => s + (parseFloat(d.value) || 0), 0);
+                return `
+                <div class="kanban-col" data-stage="${stage.id}"
+                    ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event, '${stage.id}')">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <div style="width:10px;height:10px;border-radius:50%;background:${stage.color};"></div>
+                            <span style="font-size:14px;font-weight:700;color:#0f172a;">${stage.label}</span>
+                        </div>
+                        <span class="badge" style="background:${stage.bg};color:${stage.color};">${stageDeals.length}</span>
+                    </div>
+                    <div style="font-size:12px;color:#94a3b8;margin-bottom:12px;">${formatCurrency(totalValue)}</div>
+                    ${stageDeals.map(d => `
+                        <div class="kanban-card" draggable="true" data-deal-id="${d.id}"
+                            ondragstart="onDragStart(event, '${d.id}')">
+                            <div style="display:flex;align-items:start;justify-content:space-between;margin-bottom:8px;">
+                                <h4 style="font-size:14px;font-weight:600;flex:1;">${escapeHtml(d.title)}</h4>
+                                <div style="display:flex;gap:2px;flex-shrink:0;margin-left:8px;">
+                                    <button class="btn-icon" style="width:28px;height:28px;" onclick="showDealForm('${d.id}')"><i class="fas fa-pen" style="font-size:11px;"></i></button>
+                                    <button class="btn-icon danger" style="width:28px;height:28px;" onclick="deleteDeal('${d.id}')"><i class="fas fa-trash" style="font-size:11px;"></i></button>
+                                </div>
+                            </div>
+                            <div style="font-size:18px;font-weight:800;color:${stage.color};font-family:'Space Grotesk';margin-bottom:8px;">${formatCurrency(d.value)}</div>
+                            ${d.contactId ? `
+                                <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#64748b;">
+                                    <div style="width:22px;height:22px;border-radius:6px;background:${getAvatarColor(getContactName(d.contactId))};display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:700;">${getInitials(getContactName(d.contactId))}</div>
+                                    ${escapeHtml(getContactName(d.contactId))}
+                                </div>
+                            ` : ''}
+                            ${d.probability ? `<div style="margin-top:8px;"><div class="progress-bar" style="height:4px;"><div class="progress-fill" style="width:${d.probability}%;background:${stage.color};"></div></div><div style="font-size:11px;color:#94a3b8;margin-top:3px;">${d.probability}% probabilidad</div></div>` : ''}
+                        </div>
+                    `).join('')}
+                    ${stageDeals.length === 0 ? `<div style="text-align:center;padding:30px 10px;color:#cbd5e1;font-size:13px;">Arrastra un negocio aquí</div>` : ''}
+                </div>`;
+            }).join('')}
+        </div>`;
+    }
+
+    function showDealForm(id) {
+        const d = id ? state.deals.find(x => x.id === id) : null;
+        const isEdit = !!d;
+        const contactOptions = state.contacts.map(c =>
+            `<option value="${c.id}" ${d?.contactId === c.id ? 'selected' : ''}>${escapeHtml(c.name)}</option>`
+        ).join('');
+        const stageOptions = DEAL_STAGES.map(s =>
+            `<option value="${s.id}" ${d?.stage === s.id ? 'selected' : ''}>${s.label}</option>`
+        ).join('');
+
+        showModal(`
+            <div style="padding:28px;">
+                <h2 style="font-family:'Space Grotesk';font-size:20px;font-weight:700;margin-bottom:24px;">
+                    ${isEdit ? 'Editar Negocio' : 'Nuevo Negocio'}
+                </h2>
+                <form id="dealForm" onsubmit="saveDeal(event, '${id || ''}')">
+                    <div style="display:grid;gap:16px;">
+                        <div>
+                            <label class="form-label">Título del negocio *</label>
+                            <input class="form-input" name="title" required value="${escapeHtml(d?.title || '')}" placeholder="Ej: Renovación de contrato">
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <div>
+                                <label class="form-label">Valor (MXN)</label>
+                                <input class="form-input" name="value" type="number" min="0" step="100" value="${d?.value || ''}" placeholder="0">
+                            </div>
+                            <div>
+                                <label class="form-label">Probabilidad (%)</label>
+                                <input class="form-input" name="probability" type="number" min="0" max="100" value="${d?.probability || ''}" placeholder="50">
+                            </div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <div>
+                                <label class="form-label">Contacto</label>
+                                <select class="form-select" name="contactId">
+                                    <option value="">Sin contacto</option>
+                                    ${contactOptions}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label">Etapa</label>
+                                <select class="form-select" name="stage">${stageOptions}</select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="form-label">Notas</label>
+                            <textarea class="form-input" name="notes" rows="3" placeholder="Detalles del negocio...">${escapeHtml(d?.notes || '')}</textarea>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:12px;margin-top:24px;justify-content:flex-end;">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">${isEdit ? 'Guardar Cambios' : 'Crear Negocio'}</button>
+                    </div>
+                </form>
+            </div>
+        `);
+    }
+
+    async function saveDeal(e, id) {
+        e.preventDefault();
+        const form = e.target;
+        const data = {
+            title: form.title.value.trim(),
+            value: parseFloat(form.value.value) || 0,
+            probability: parseInt(form.probability.value) || 0,
+            contactId: form.contactId.value,
+            stage: form.stage.value,
+            notes: form.notes.value.trim()
+        };
+        if (!data.title) return;
+
+        if (id) {
+            const idx = state.deals.findIndex(d => d.id === id);
+            if (idx !== -1) state.deals[idx] = { ...state.deals[idx], ...data, updatedAt: new Date().toISOString() };
+            toast('Negocio actualizado');
+        } else {
+            state.deals.push({ id: uuid(), ...data, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+            toast('Negocio creado');
+        }
+        await persistState();
+        closeModal();
+        renderView();
+    }
+
+    function deleteDeal(id) {
+        const d = state.deals.find(x => x.id === id);
+        showConfirm(`¿Eliminar el negocio "${d?.title}"?`, async () => {
+            state.deals = state.deals.filter(x => x.id !== id);
+            await persistState();
+            toast('Negocio eliminado', 'info');
+            renderView();
+        });
+    }
+
+    // Drag and Drop para Kanban
+    let draggedDealId = null;
+
+    function onDragStart(e, dealId) {
+        draggedDealId = dealId;
+        e.target.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+    }
+
+    function onDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        e.currentTarget.classList.add('drag-over');
+    }
+
+    function onDragLeave(e) {
+        e.currentTarget.classList.remove('drag-over');
+    }
+
+    async function onDrop(e, newStage) {
+        e.preventDefault();
+        e.currentTarget.classList.remove('drag-over');
+        if (!draggedDealId) return;
+
+        const deal = state.deals.find(d => d.id === draggedDealId);
+        if (deal && deal.stage !== newStage) {
+            deal.stage = newStage;
+            deal.updatedAt = new Date().toISOString();
+            await persistState();
+            toast(`Negocio movido a "${DEAL_STAGES.find(s => s.id === newStage)?.label}"`, 'info');
+            renderView();
+        }
+        draggedDealId = null;
+    }
+
+    function initKanbanDrag() {
+        document.querySelectorAll('.kanban-card').forEach(card => {
+            card.addEventListener('dragend', () => {
+                card.classList.remove('dragging');
+                document.querySelectorAll('.kanban-col').forEach(col => col.classList.remove('drag-over'));
+                draggedDealId = null;
+            });
+        });
+    }
+
+    // ============================================================
+    //  TAREAS
+    // ============================================================
+    function renderTasks() {
+        let filtered = state.tasks;
+        if (state.searchQuery) {
+            filtered = filtered.filter(t =>
+                t.title.toLowerCase().includes(state.searchQuery) ||
+                (t.description || '').toLowerCase().includes(state.searchQuery)
+            );
+        }
+        // Ordenar: pendientes primero, luego por prioridad
+        const priorityOrder = { alta: 0, media: 1, baja: 2 };
+        filtered = [...filtered].sort((a, b) => {
+            if (a.status === 'completada' && b.status !== 'completada') return 1;
+            if (a.status !== 'completada' && b.status === 'completada') return -1;
+            return (priorityOrder[a.priority] || 2) - (priorityOrder[b.priority] || 2);
+        });
+
+        const priorityConfig = {
+            alta: { label: 'Alta', color: '#dc2626', bg: '#fee2e2' },
+            media: { label: 'Media', color: '#d97706', bg: '#fef3c7' },
+            baja: { label: 'Baja', color: '#64748b', bg: '#f1f5f9' }
+        };
+        const statusConfig = {
+            pendiente: { label: 'Pendiente', color: '#64748b', bg: '#f1f5f9' },
+            en_progreso: { label: 'En Progreso', color: '#0891b2', bg: '#cffafe' },
+            completada: { label: 'Completada', color: '#059669', bg: '#d1fae5' }
+        };
+
+        const pendingCount = state.tasks.filter(t => t.status !== 'completada').length;
+        const completedCount = state.tasks.filter(t => t.status === 'completada').length;
+        const progress = state.tasks.length > 0 ? Math.round(completedCount / state.tasks.length * 100) : 0;
+
+        return `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+            <div>
+                <h1 style="font-family:'Space Grotesk';font-size:28px;font-weight:700;letter-spacing:-0.02em;">Tareas</h1>
+                <p style="color:#64748b;font-size:15px;margin-top:4px;">${pendingCount} pendiente${pendingCount!==1?'s':''} · ${completedCount} completada${completedCount!==1?'s':''}</p>
+            </div>
+            <button class="btn btn-primary" onclick="showTaskForm()">
+                <i class="fas fa-plus"></i> Nueva Tarea
+            </button>
+        </div>
+
+        ${state.tasks.length > 0 ? `
+        <div class="stat-card animate-in" style="margin-bottom:20px;padding:16px 24px;">
+            <div style="display:flex;align-items:center;gap:16px;">
+                <span style="font-size:13px;font-weight:600;color:#374151;">Progreso general</span>
+                <div class="progress-bar" style="flex:1;">
+                    <div class="progress-fill" style="width:${progress}%;background:#10b981;"></div>
+                </div>
+                <span style="font-size:13px;font-weight:700;color:#059669;">${progress}%</span>
+            </div>
+        </div>` : ''}
+
+        <div class="stat-card animate-in" style="padding:0;overflow:hidden;">
+            ${filtered.length === 0 ? `
+                <div class="empty-state">
+                    <div class="icon-wrap"><i class="fas fa-check-circle" style="font-size:28px;color:#cbd5e1;"></i></div>
+                    <h3 style="font-size:16px;font-weight:600;color:#64748b;">${state.searchQuery ? 'Sin resultados' : 'Sin tareas'}</h3>
+                    <p style="font-size:14px;color:#94a3b8;margin-top:4px;">${state.searchQuery ? 'Intenta con otro término' : 'Crea tu primera tarea'}</p>
+                    ${!state.searchQuery ? '<button class="btn btn-primary" style="margin-top:16px;" onclick="showTaskForm()"><i class="fas fa-plus"></i> Crear Tarea</button>' : ''}
+                </div>
+            ` : `
+                <div style="overflow-x:auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width:44px;"></th>
+                                <th>Tarea</th>
+                                <th>Prioridad</th>
+                                <th>Estado</th>
+                                <th>Fecha límite</th>
+                                <th>Contacto</th>
+                                <th style="width:100px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${filtered.map(t => {
+                                const p = priorityConfig[t.priority] || priorityConfig.media;
+                                const s = statusConfig[t.status] || statusConfig.pendiente;
+                                const isDone = t.status === 'completada';
+                                const isOverdue = t.dueDate && new Date(t.dueDate) < new Date() && !isDone;
+                                return `
+                                <tr style="${isDone ? 'opacity:0.5;' : ''}">
+                                    <td>
+                                        <div class="custom-check ${isDone ? 'checked' : ''}" onclick="toggleTask('${t.id}')">
+                                            <i class="fas fa-check"></i>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div style="font-weight:600;font-size:14px;${isDone ? 'text-decoration:line-through;' : ''}">${escapeHtml(t.title)}</div>
+                                        ${t.description ? `<div style="font-size:12px;color:#94a3b8;margin-top:2px;max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(t.description)}</div>` : ''}
+                                    </td>
+                                    <td><span class="badge" style="background:${p.bg};color:${p.color};">${p.label}</span></td>
+                                    <td><span class="badge" style="background:${s.bg};color:${s.color};">${s.label}</span></td>
+                                    <td style="font-size:13px;${isOverdue ? 'color:#dc2626;font-weight:600;' : 'color:#64748b;'}">${t.dueDate ? formatDate(t.dueDate) + (isOverdue ? ' <i class="fas fa-exclamation-circle" style="font-size:11px;"></i>' : '') : '—'}</td>
+                                    <td style="font-size:13px;color:#64748b;">${t.contactId ? escapeHtml(getContactName(t.contactId)) : '—'}</td>
+                                    <td>
+                                        <div style="display:flex;gap:4px;">
+                                            <button class="btn-icon" title="Editar" onclick="showTaskForm('${t.id}')"><i class="fas fa-pen" style="font-size:13px;"></i></button>
+                                            <button class="btn-icon danger" title="Eliminar" onclick="deleteTask('${t.id}')"><i class="fas fa-trash" style="font-size:13px;"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>`;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `}
+        </div>`;
+    }
+
+    function showTaskForm(id) {
+        const t = id ? state.tasks.find(x => x.id === id) : null;
+        const isEdit = !!t;
+        const contactOptions = state.contacts.map(c =>
+            `<option value="${c.id}" ${t?.contactId === c.id ? 'selected' : ''}>${escapeHtml(c.name)}</option>`
+        ).join('');
+
+        showModal(`
+            <div style="padding:28px;">
+                <h2 style="font-family:'Space Grotesk';font-size:20px;font-weight:700;margin-bottom:24px;">
+                    ${isEdit ? 'Editar Tarea' : 'Nueva Tarea'}
+                </h2>
+                <form id="taskForm" onsubmit="saveTask(event, '${id || ''}')">
+                    <div style="display:grid;gap:16px;">
+                        <div>
+                            <label class="form-label">Título *</label>
+                            <input class="form-input" name="title" required value="${escapeHtml(t?.title || '')}" placeholder="Ej: Llamar al cliente">
+                        </div>
+                        <div>
+                            <label class="form-label">Descripción</label>
+                            <textarea class="form-input" name="description" rows="2" placeholder="Detalles...">${escapeHtml(t?.description || '')}</textarea>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <div>
+                                <label class="form-label">Prioridad</label>
+                                <select class="form-select" name="priority">
+                                    <option value="alta" ${t?.priority === 'alta' ? 'selected' : ''}>Alta</option>
+                                    <option value="media" ${t?.priority === 'media' || !t ? 'selected' : ''}>Media</option>
+                                    <option value="baja" ${t?.priority === 'baja' ? 'selected' : ''}>Baja</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label">Estado</label>
+                                <select class="form-select" name="status">
+                                    <option value="pendiente" ${t?.status === 'pendiente' || !t ? 'selected' : ''}>Pendiente</option>
+                                    <option value="en_progreso" ${t?.status === 'en_progreso' ? 'selected' : ''}>En Progreso</option>
+                                    <option value="completada" ${t?.status === 'completada' ? 'selected' : ''}>Completada</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <div>
+                                <label class="form-label">Fecha límite</label>
+                                <input class="form-input" name="dueDate" type="date" value="${t?.dueDate || ''}">
+                            </div>
+                            <div>
+                                <label class="form-label">Contacto</label>
+                                <select class="form-select" name="contactId">
+                                    <option value="">Sin contacto</option>
+                                    ${contactOptions}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:12px;margin-top:24px;justify-content:flex-end;">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">${isEdit ? 'Guardar Cambios' : 'Crear Tarea'}</button>
+                    </div>
+                </form>
+            </div>
+        `);
+    }
+
+    async function saveTask(e, id) {
+        e.preventDefault();
+        const form = e.target;
+        const data = {
+            title: form.title.value.trim(),
+            description: form.description.value.trim(),
+            priority: form.priority.value,
+            status: form.status.value,
+            dueDate: form.dueDate.value,
+            contactId: form.contactId.value
+        };
+        if (!data.title) return;
+
+        if (id) {
+            const idx = state.tasks.findIndex(t => t.id === id);
+            if (idx !== -1) state.tasks[idx] = { ...state.tasks[idx], ...data, updatedAt: new Date().toISOString() };
+            toast('Tarea actualizada');
+        } else {
+            state.tasks.push({ id: uuid(), ...data, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+            toast('Tarea creada');
+        }
+        await persistState();
+        closeModal();
+        renderView();
+    }
+
+    async function toggleTask(id) {
+        const task = state.tasks.find(t => t.id === id);
+        if (task) {
+            task.status = task.status === 'completada' ? 'pendiente' : 'completada';
+            task.updatedAt = new Date().toISOString();
+            await persistState();
+            renderView();
+        }
+    }
+
+    function deleteTask(id) {
+        const t = state.tasks.find(x => x.id === id);
+        showConfirm(`¿Eliminar la tarea "${t?.title}"?`, async () => {
+            state.tasks = state.tasks.filter(x => x.id !== id);
+            await persistState();
+            toast('Tarea eliminada', 'info');
+            renderView();
+        });
+    }
+
+    // ============================================================
+    //  NOTAS
+    // ============================================================
+    function renderNotes() {
+        let filtered = state.notes;
+        if (state.searchQuery) {
+            filtered = filtered.filter(n =>
+                n.title.toLowerCase().includes(state.searchQuery) ||
+                (n.content || '').toLowerCase().includes(state.searchQuery)
+            );
+        }
+        // Ordenar por fecha de creación, más reciente primero
+        filtered = [...filtered].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        const noteColors = ['#d1fae5','#cffafe','#fef3c7','#fce7f3','#e0e7ff','#fee2e2','#f1f5f9'];
+
+        return `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+            <div>
+                <h1 style="font-family:'Space Grotesk';font-size:28px;font-weight:700;letter-spacing:-0.02em;">Notas</h1>
+                <p style="color:#64748b;font-size:15px;margin-top:4px;">${state.notes.length} nota${state.notes.length!==1?'s':''}</p>
+            </div>
+            <button class="btn btn-primary" onclick="showNoteForm()">
+                <i class="fas fa-plus"></i> Nueva Nota
+            </button>
+        </div>
+        ${filtered.length === 0 ? `
+            <div class="stat-card animate-in">
+                <div class="empty-state">
+                    <div class="icon-wrap"><i class="fas fa-sticky-note" style="font-size:28px;color:#cbd5e1;"></i></div>
+                    <h3 style="font-size:16px;font-weight:600;color:#64748b;">${state.searchQuery ? 'Sin resultados' : 'Sin notas'}</h3>
+                    <p style="font-size:14px;color:#94a3b8;margin-top:4px;">${state.searchQuery ? 'Intenta con otro término' : 'Crea tu primera nota'}</p>
+                    ${!state.searchQuery ? '<button class="btn btn-primary" style="margin-top:16px;" onclick="showNoteForm()"><i class="fas fa-plus"></i> Crear Nota</button>' : ''}
+                </div>
+            </div>
+        ` : `
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">
+                ${filtered.map((n, i) => {
+                    const bgColor = noteColors[i % noteColors.length];
+                    return `
+                    <div class="note-card animate-in" style="animation-delay:${i * 0.03}s;" onclick="showNoteForm('${n.id}')">
+                        <div style="display:flex;align-items:start;justify-content:space-between;margin-bottom:8px;">
+                            <h3 style="font-size:15px;font-weight:700;flex:1;">${escapeHtml(n.title)}</h3>
+                            <button class="btn-icon danger" style="width:28px;height:28px;flex-shrink:0;" onclick="event.stopPropagation();deleteNote('${n.id}')">
+                                <i class="fas fa-trash" style="font-size:11px;"></i>
+                            </button>
+                        </div>
+                        <p style="font-size:13px;color:#64748b;line-height:1.5;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;">${escapeHtml(n.content)}</p>
+                        <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;">
+                            ${n.contactId ? `<span style="font-size:11px;color:#94a3b8;"><i class="fas fa-user" style="margin-right:4px;"></i>${escapeHtml(getContactName(n.contactId))}</span>` : '<span></span>'}
+                            <span style="font-size:11px;color:#94a3b8;">${relativeTime(n.createdAt)}</span>
+                        </div>
+                    </div>`;
+                }).join('')}
+            </div>
+        `}`;
+    }
+
+    function showNoteForm(id) {
+        const n = id ? state.notes.find(x => x.id === id) : null;
+        const isEdit = !!n;
+        const contactOptions = state.contacts.map(c =>
+            `<option value="${c.id}" ${n?.contactId === c.id ? 'selected' : ''}>${escapeHtml(c.name)}</option>`
+        ).join('');
+
+        showModal(`
+            <div style="padding:28px;">
+                <h2 style="font-family:'Space Grotesk';font-size:20px;font-weight:700;margin-bottom:24px;">
+                    ${isEdit ? 'Editar Nota' : 'Nueva Nota'}
+                </h2>
+                <form id="noteForm" onsubmit="saveNote(event, '${id || ''}')">
+                    <div style="display:grid;gap:16px;">
+                        <div>
+                            <label class="form-label">Título *</label>
+                            <input class="form-input" name="title" required value="${escapeHtml(n?.title || '')}" placeholder="Título de la nota">
+                        </div>
+                        <div>
+                            <label class="form-label">Contenido</label>
+                            <textarea class="form-input" name="content" rows="6" placeholder="Escribe tu nota aquí...">${escapeHtml(n?.content || '')}</textarea>
+                        </div>
+                        <div>
+                            <label class="form-label">Contacto relacionado</label>
+                            <select class="form-select" name="contactId">
+                                <option value="">Sin contacto</option>
+                                ${contactOptions}
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:12px;margin-top:24px;justify-content:flex-end;">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">${isEdit ? 'Guardar Cambios' : 'Crear Nota'}</button>
+                    </div>
+                </form>
+            </div>
+        `);
+    }
+
+    async function saveNote(e, id) {
+        e.preventDefault();
+        const form = e.target;
+        const data = {
+            title: form.title.value.trim(),
+            content: form.content.value.trim(),
+            contactId: form.contactId.value
+        };
+        if (!data.title) return;
+
+        if (id) {
+            const idx = state.notes.findIndex(n => n.id === id);
+            if (idx !== -1) state.notes[idx] = { ...state.notes[idx], ...data, updatedAt: new Date().toISOString() };
+            toast('Nota actualizada');
+        } else {
+            state.notes.push({ id: uuid(), ...data, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+            toast('Nota creada');
+        }
+        await persistState();
+        closeModal();
+        renderView();
+    }
+
+    function deleteNote(id) {
+        const n = state.notes.find(x => x.id === id);
+        showConfirm(`¿Eliminar la nota "${n?.title}"?`, async () => {
+            state.notes = state.notes.filter(x => x.id !== id);
+            await persistState();
+            toast('Nota eliminada', 'info');
+            renderView();
+        });
+    }
+
+    // ============================================================
+    //  CONFIGURACIÓN
+    // ============================================================
+    function renderSettings() {
+        const dataSize = new Blob([JSON.stringify({ contacts: state.contacts, deals: state.deals, tasks: state.tasks, notes: state.notes })]).size;
+        const sizeStr = dataSize > 1024 ? (dataSize / 1024).toFixed(1) + ' KB' : dataSize + ' B';
+
+        return `
+        <div style="margin-bottom:28px;">
+            <h1 style="font-family:'Space Grotesk';font-size:28px;font-weight:700;letter-spacing:-0.02em;">Configuración</h1>
+            <p style="color:#64748b;font-size:15px;margin-top:4px;">Gestiona tus datos y preferencias</p>
+        </div>
+
+        <div style="display:grid;gap:20px;max-width:600px;">
+            <!-- Info del sistema -->
+            <div class="stat-card animate-in">
+                <h3 style="font-family:'Space Grotesk';font-size:16px;font-weight:700;margin-bottom:16px;">Información del Sistema</h3>
+                <div style="display:grid;gap:12px;">
+                    <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;">
+                        <span style="font-size:14px;color:#64748b;">Modo de almacenamiento</span>
+                        <span class="badge" style="background:${state.isLocal ? '#fef3c7' : '#d1fae5'};color:${state.isLocal ? '#d97706' : '#059669'};">${state.isLocal ? 'Local (localStorage)' : 'Netlify Blobs'}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;">
+                        <span style="font-size:14px;color:#64748b;">Contactos</span>
+                        <span style="font-size:14px;font-weight:600;">${state.contacts.length}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;">
+                        <span style="font-size:14px;color:#64748b;">Negocios</span>
+                        <span style="font-size:14px;font-weight:600;">${state.deals.length}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;">
+                        <span style="font-size:14px;color:#64748b;">Tareas</span>
+                        <span style="font-size:14px;font-weight:600;">${state.tasks.length}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;">
+                        <span style="font-size:14px;color:#64748b;">Notas</span>
+                        <span style="font-size:14px;font-weight:600;">${state.notes.length}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:10px 0;">
+                        <span style="font-size:14px;color:#64748b;">Tamaño de datos</span>
+                        <span style="font-size:14px;font-weight:600;">${sizeStr}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Exportar / Importar -->
+            <div class="stat-card animate-in animate-in-delay-1">
+                <h3 style="font-family:'Space Grotesk';font-size:16px;font-weight:700;margin-bottom:16px;">Exportar / Importar Datos</h3>
+                <div style="display:grid;gap:12px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#f8fafc;border-radius:12px;">
+                        <div>
+                            <div style="font-size:14px;font-weight:600;">Exportar datos</div>
+                            <div style="font-size:12px;color:#94a3b8;">Descarga un archivo JSON con todos tus datos</div>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="exportData()"><i class="fas fa-download"></i> Exportar</button>
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#f8fafc;border-radius:12px;">
+                        <div>
+                            <div style="font-size:14px;font-weight:600;">Importar datos</div>
+                            <div style="font-size:12px;color:#94a3b8;">Carga un archivo JSON previamente exportado</div>
+                        </div>
+                        <label class="btn btn-secondary btn-sm" style="cursor:pointer;">
+                            <i class="fas fa-upload"></i> Importar
+                            <input type="file" accept=".json" style="display:none;" onchange="importData(event)">
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Zona peligrosa -->
+            <div class="stat-card animate-in animate-in-delay-2" style="border:1px solid #fee2e2;">
+                <h3 style="font-family:'Space Grotesk';font-size:16px;font-weight:700;color:#dc2626;margin-bottom:16px;">Zona Peligrosa</h3>
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#fef2f2;border-radius:12px;">
+                    <div>
+                        <div style="font-size:14px;font-weight:600;color:#991b1b;">Borrar todos los datos</div>
+                        <div style="font-size:12px;color:#dc2626;">Elimina permanentemente todos los contactos, negocios, tareas y notas</div>
+                    </div>
+                    <button class="btn btn-danger btn-sm" onclick="clearAllData()"><i class="fas fa-trash-alt"></i> Borrar Todo</button>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    function exportData() {
+        const data = { contacts: state.contacts, deals: state.deals, tasks: state.tasks, notes: state.notes, exportDate: new Date().toISOString(), version: '1.0' };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `crm-backup-${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast('Datos exportados correctamente');
+    }
+
+    function importData(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+                if (data.contacts && data.deals && data.tasks && data.notes) {
+                    state.contacts = data.contacts;
+                    state.deals = data.deals;
+                    state.tasks = data.tasks;
+                    state.notes = data.notes;
+                    await persistState();
+                    toast('Datos importados correctamente');
+                    renderView();
+                } else {
+                    toast('Archivo inválido: faltan campos requeridos', 'error');
+                }
+            } catch (err) {
+                toast('Error al leer el archivo JSON', 'error');
+            }
+        };
+        reader.readAsText(file);
+        event.target.value = '';
+    }
+
+    function clearAllData() {
+        showConfirm('¿Borrar TODOS los datos?', async () => {
+            state.contacts = [];
+            state.deals = [];
+            state.tasks = [];
+            state.notes = [];
+            await persistState();
+            toast('Todos los datos han sido eliminados', 'warning');
+            renderView();
+        });
+    }
+
+    // ============================================================
+    //  RESPONSIVE: mostrar/ocultar botón hamburguesa
+    // ============================================================
+    function handleResize() {
+        const menuBtn = document.getElementById('menuBtn');
+        if (window.innerWidth <= 768) {
+            menuBtn.style.display = 'flex';
+        } else {
+            menuBtn.style.display = 'none';
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebarOverlay').classList.remove('show');
+        }
+    }
+    window.addEventListener('resize', handleResize);
+
+    // ============================================================
+    //  INICIALIZACIÓN
+    // ============================================================
+    async function init() {
+        handleResize();
+        try {
+            const data = await API.load();
+            state.contacts = data.contacts || [];
+            state.deals = data.deals || [];
+            state.tasks = data.tasks || [];
+            state.notes = data.notes || [];
+        } catch (err) {
+            console.error('Error cargando datos:', err);
+            toast('Error al cargar los datos', 'error');
+        }
+        renderView();
+    }
+
+    // Atajos de teclado
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeModal();
+        // Ctrl+K para buscar
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            document.getElementById('globalSearch').focus();
+        }
+    });
+
+    // Arrancar la app
+    init();
+    </script>
+</body>
+</html>
