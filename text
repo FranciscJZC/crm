@@ -1,0 +1,7 @@
+tu-crm/
+├── index.html
+├── package.json
+└── netlify/
+    └── functions/
+        ├── get-data.js
+        └── save-data.js
